@@ -1,7 +1,5 @@
 import { MongoClient, Db } from "mongodb";
 
-const uri = process.env.MONGODB_URI!;
-
 const options = {
   maxPoolSize: 1,
   serverSelectionTimeoutMS: 5000,
@@ -13,18 +11,21 @@ declare global {
   var _mongoClient: MongoClient | undefined;
 }
 
-let client: MongoClient;
+function getClient(): MongoClient {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error("MONGODB_URI is not set");
 
-if (process.env.NODE_ENV === "development") {
-  if (!globalThis._mongoClient) {
-    globalThis._mongoClient = new MongoClient(uri, options);
+  if (process.env.NODE_ENV === "development") {
+    if (!globalThis._mongoClient) {
+      globalThis._mongoClient = new MongoClient(uri, options);
+    }
+    return globalThis._mongoClient;
   }
-  client = globalThis._mongoClient;
-} else {
-  client = new MongoClient(uri, options);
+  return new MongoClient(uri, options);
 }
 
 export async function getDb(): Promise<Db> {
+  const client = getClient();
   await client.connect();
   return client.db("tilde");
 }
