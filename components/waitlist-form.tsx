@@ -23,33 +23,40 @@ export function WaitlistForm() {
     setEmail(e.target.value);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || status === "loading") return;
 
-    setStatus("loading");
     setMessage("");
 
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, company: honeypot }),
-      });
+    // Let the vanish animation play (~700ms), then show loading & fire the request
+    const submittedEmail = email;
+    const submittedHoneypot = honeypot;
 
-      const data = await res.json();
+    setTimeout(async () => {
+      setStatus("loading");
 
-      if (res.ok) {
-        setStatus("success");
-        setCount(data.count ?? null);
-      } else {
+      try {
+        const res = await fetch("/api/waitlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: submittedEmail, company: submittedHoneypot }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setStatus("success");
+          setCount(data.count ?? null);
+        } else {
+          setStatus("error");
+          setMessage(data.error || "Something went wrong. Please try again.");
+        }
+      } catch {
         setStatus("error");
-        setMessage(data.error || "Something went wrong. Please try again.");
+        setMessage("Something went wrong. Please try again.");
       }
-    } catch {
-      setStatus("error");
-      setMessage("Something went wrong. Please try again.");
-    }
+    }, 700);
   };
 
   return (
