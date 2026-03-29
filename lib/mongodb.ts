@@ -11,7 +11,11 @@ declare global {
   var _mongoClient: MongoClient | undefined;
 }
 
+let client: MongoClient;
+
 function getClient(): MongoClient {
+  if (client) return client;
+
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI is not set");
 
@@ -19,9 +23,11 @@ function getClient(): MongoClient {
     if (!globalThis._mongoClient) {
       globalThis._mongoClient = new MongoClient(uri, options);
     }
-    return globalThis._mongoClient;
+    client = globalThis._mongoClient;
+  } else {
+    client = new MongoClient(uri, options);
   }
-  return new MongoClient(uri, options);
+  return client;
 }
 
 export async function getDb(): Promise<Db> {
