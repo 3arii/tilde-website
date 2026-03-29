@@ -105,48 +105,51 @@ export function PlaceholdersAndVanishInput({
   }, [value, draw]);
 
   const animate = (start: number) => {
-    const animateFrame = (pos: number = 0) => {
-      requestAnimationFrame(() => {
-        const newArr = [];
-        for (let i = 0; i < newDataRef.current.length; i++) {
-          const current = newDataRef.current[i];
-          if (current.x < pos) {
-            newArr.push(current);
-          } else {
-            if (current.r <= 0) {
-              current.r = 0;
-              continue;
-            }
-            current.x += Math.random() > 0.5 ? 1 : -1;
-            current.y += Math.random() > 0.5 ? 1 : -1;
-            current.r -= 0.05 * Math.random();
-            newArr.push(current);
-          }
-        }
-        newDataRef.current = newArr;
-        const ctx = canvasRef.current?.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(pos, 0, 800, 800);
-          newDataRef.current.forEach((t) => {
-            const { x: n, y: i, r: s, color: color } = t;
-            if (n > pos) {
-              ctx.beginPath();
-              ctx.rect(n, i, s, s);
-              ctx.fillStyle = color;
-              ctx.strokeStyle = color;
-              ctx.stroke();
-            }
-          });
-        }
-        if (newDataRef.current.length > 0) {
-          animateFrame(pos - 8);
+    let prevTime = 0;
+    const animateFrame = (pos: number, timestamp: number) => {
+      if (!prevTime) prevTime = timestamp;
+      const delta = Math.min((timestamp - prevTime) / 16.667, 3); // normalize to 60fps, cap at 3x
+      prevTime = timestamp;
+
+      const newArr = [];
+      for (let i = 0; i < newDataRef.current.length; i++) {
+        const current = newDataRef.current[i];
+        if (current.x < pos) {
+          newArr.push(current);
         } else {
-          setValue("");
-          setAnimating(false);
+          if (current.r <= 0) {
+            current.r = 0;
+            continue;
+          }
+          current.x += Math.random() > 0.5 ? 1 : -1;
+          current.y += Math.random() > 0.5 ? 1 : -1;
+          current.r -= 0.05 * Math.random() * delta;
+          newArr.push(current);
         }
-      });
+      }
+      newDataRef.current = newArr;
+      const ctx = canvasRef.current?.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(pos, 0, 800, 800);
+        newDataRef.current.forEach((t) => {
+          const { x: n, y: i, r: s, color: color } = t;
+          if (n > pos) {
+            ctx.beginPath();
+            ctx.rect(n, i, s, s);
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+          }
+        });
+      }
+      if (newDataRef.current.length > 0) {
+        requestAnimationFrame((t) => animateFrame(pos - 8 * delta, t));
+      } else {
+        setValue("");
+        setAnimating(false);
+      }
     };
-    animateFrame(start);
+    requestAnimationFrame((t) => animateFrame(start, t));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
